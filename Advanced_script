@@ -1,0 +1,64 @@
+(function executeRule(current, previous) {
+    
+    var shortDesc = current.short_description.toString().toLowerCase();
+    var description = current.description.toString().toLowerCase();
+    var combinedText = shortDesc + ' ' + description;
+    
+    var assignmentRules = [
+        {
+            keywords: ['password', 'login', 'account locked', 'forgot password', 'cant login', 'cannot login'],
+            assignmentGroup: 'Service Desk',
+            priority: 1
+        },
+        {
+            keywords: ['network', 'wifi', 'vpn', 'connection', 'internet', 'cant connect'],
+            assignmentGroup: 'Network',
+            priority: 2
+        },
+        {
+            keywords: ['email', 'outlook', 'mailbox', 'spam', 'cant send email'],
+            assignmentGroup: 'Service Desk',
+            priority: 3
+        },
+        {
+            keywords: ['printer', 'print', 'scanner', 'cant print', 'printing'],
+            assignmentGroup: 'Hardware',
+            priority: 4
+        },
+        {
+            keywords: ['software', 'application', 'install', 'program', 'app'],
+            assignmentGroup: 'Software',
+            priority: 5
+        }
+    ];
+    
+    assignmentRules.sort(function(a, b) {
+        return a.priority - b.priority;
+    });
+    
+    for (var i = 0; i < assignmentRules.length; i++) {
+        var rule = assignmentRules[i];
+        
+        for (var j = 0; j < rule.keywords.length; j++) {
+            var keyword = rule.keywords[j];
+            
+            if (combinedText.indexOf(keyword) != -1) {
+                
+                var grp = new GlideRecord('sys_user_group');
+                grp.addQuery('name', rule.assignmentGroup);
+                grp.query();
+                
+                if (grp.next()) {
+                    current.assignment_group = grp.sys_id;
+                    gs.info('✓ Auto-assigned incident ' + current.number + ' to ' + rule.assignmentGroup + ' based on keyword: ' + keyword);
+                    return;
+                } else {
+                    gs.warn('⚠ Assignment group not found: ' + rule.assignmentGroup);
+                }
+            }
+        }
+    }
+    
+    gs.info('ℹ No keywords matched for incident ' + current.number);
+
+})(current, previous);
